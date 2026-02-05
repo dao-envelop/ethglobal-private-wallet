@@ -105,7 +105,7 @@ contract ProxySmartWalletTest is BaseTest {
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
     uint128 public constant WANT_TO_TRANSFER = 100e6;
-    uint128 public constant SLIPAGE = 100e6;
+    uint128 public constant SLIPPAGE_BPS = 100; // 100 bps - 1%, 10 = 0.1%
 
 
     address internal beneficiary = address(0xFEEBEEF);
@@ -173,7 +173,7 @@ contract ProxySmartWalletTest is BaseTest {
         assertGt(currency1.balanceOf(address(this)), 0);
         positionManager.getPoolAndPositionInfo(tokenId);
         //uint128 curL = positionManager.getPositionLiquidity(tokenId);
-        uint128 liquidityDecrease =  WANT_TO_TRANSFER / 2;
+        uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
         uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
         uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
         //address recipient;
@@ -273,7 +273,7 @@ contract ProxySmartWalletTest is BaseTest {
         // Pre conditions: two token balanses should  ///
         // be already at proxy wallet                 ///
         /////////////////////////////////////////////////
-        uint128 liquidityDecrease =  WANT_TO_TRANSFER / 2;
+        uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
         uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
         uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
         //address recipient;
@@ -329,7 +329,11 @@ contract ProxySmartWalletTest is BaseTest {
           WANT_TO_TRANSFER
         );
         vm.stopPrank();
-        //assertEqDecimal(curForTransfer.balanceOf(address(beneficiary)), WANT_TO_TRANSFER, 6);
+        assertApproxEqAbs(
+            curForTransfer.balanceOf(address(beneficiary)), 
+            WANT_TO_TRANSFER, 
+            WANT_TO_TRANSFER * SLIPPAGE_BPS / 10_000
+        );
     }
 
 

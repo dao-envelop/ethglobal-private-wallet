@@ -55,7 +55,7 @@ contract ProxySmartWallet {
     {
     	// Prepare swap
     	bool swapDirection;
-    	uint256 amountIn;
+    	uint256 amountIn; 
     	if  (Currency.unwrap(_poolKey.currency1) == _tokenForTransfer) {
     		swapDirection = true;
     		amountIn = _poolKey.currency0.balanceOf(address(this));
