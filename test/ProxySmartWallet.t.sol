@@ -207,8 +207,8 @@ contract ProxySmartWalletTest is BaseTest {
         // be already at proxy wallet                 ///
         /////////////////////////////////////////////////
         uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
-        uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
-        uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
+        uint256 amount0Min = liquidityDecrease / 2 - 1e6;
+        uint256 amount1Min = liquidityDecrease / 2 - 1e6;
         //address recipient;
 
         bytes memory actions = abi.encodePacked(
