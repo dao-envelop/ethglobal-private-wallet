@@ -239,7 +239,17 @@ contract ProxySmartWalletTest is BaseTest {
         );
 
         //address owner = positionManager.ownerOf(tokenId);
-
+        /////////////////////////////////////////////////////
+        //   Main DEmo Flow could be start from here.      //
+        // Let's suppose that user already have Uni V4     //
+        // position with NFT(tokenId) on her(his) EOA.     // 
+        // The flow is:                                    //
+        // 1. sign 7702 delegation for calibur.            //
+        // 2. Decreae liqudity in position  - get funds    //
+        //    for transfer with target on new proxy wallet //
+        // 3. Swap half of withdrawn assets to one.        //
+        // 4. transfer to beneficiary                      //
+        /////////////////////////////////////////////////////       
 
         vm.startPrank(address(this));
         //console2.log("Sender is: %s", msg.sender);
@@ -249,13 +259,18 @@ contract ProxySmartWalletTest is BaseTest {
             block.timestamp + 60 // 60 second deadline
         );
         vm.stopPrank();
-        ///////////////////////////////////////////////// 
+        ////////////////////////////////////////////////////////////////////////////////
+
+        
+
+
         //(PoolKey memory poolKey, PositionInfo info)
         (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
         pK.currency0.balanceOf(freshProxyWalletAddress);
         pK.currency1.balanceOf(freshProxyWalletAddress);
         //console2.log("freshProxyWallet.router: %s", freshProxyWallet.router());
         Currency curForTransfer = pK.currency1; 
+
         vm.startPrank(address(this));
         freshProxyWallet.swapAndTransfer(
           pK,
