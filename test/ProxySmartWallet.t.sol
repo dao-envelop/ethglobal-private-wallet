@@ -229,6 +229,7 @@ contract ProxySmartWalletTest is BaseTest {
             Constants.ZERO_BYTES                // No hook data needed
         );
         
+        // Creating fresh wallet
         address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
         freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
         // Parameters for TAKE_PAIR
@@ -266,16 +267,20 @@ contract ProxySmartWalletTest is BaseTest {
 
         //(PoolKey memory poolKey, PositionInfo info)
         (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+
+        // For view in debug trace only
         pK.currency0.balanceOf(freshProxyWalletAddress);
         pK.currency1.balanceOf(freshProxyWalletAddress);
         //console2.log("freshProxyWallet.router: %s", freshProxyWallet.router());
-        Currency curForTransfer = pK.currency1; 
+        
+        // Here we change one token from pair for transfer !!
+        Currency curForTransfer = pK.currency1;  
 
         vm.startPrank(address(this));
         freshProxyWallet.swapAndTransfer(
           pK,
           Currency.unwrap(curForTransfer),  //token address for transfer
-          beneficiary,  //to
+          beneficiary,                      //to
           WANT_TO_TRANSFER
         );
         vm.stopPrank();
@@ -285,6 +290,4 @@ contract ProxySmartWalletTest is BaseTest {
             WANT_TO_TRANSFER * SLIPPAGE_BPS / 10_000
         );
     }
-
-
 }
