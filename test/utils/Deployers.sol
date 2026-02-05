@@ -45,9 +45,20 @@ abstract contract Deployers {
         permit2.approve(address(token), address(poolManager), type(uint160).max, type(uint48).max);
     }
 
+    function deployToken(string memory symb, uint256 supply, uint8 dec) internal returns (MockERC20 token) {
+        token = new MockERC20("Test Token", symb, dec);
+        token.mint(address(this), supply);
+
+        token.approve(address(permit2), type(uint256).max);
+        token.approve(address(swapRouter), type(uint256).max);
+
+        permit2.approve(address(token), address(positionManager), type(uint160).max, type(uint48).max);
+        permit2.approve(address(token), address(poolManager), type(uint160).max, type(uint48).max);
+    }
+
     function deployCurrencyPair() internal virtual returns (Currency currency0, Currency currency1) {
-        MockERC20 token0 = deployToken();
-        MockERC20 token1 = deployToken();
+        MockERC20 token0 = deployToken("fUSDT", 10_000_000e18, 6);
+        MockERC20 token1 = deployToken("fUSDC", 20_000_000e18, 6);
 
         if (token0 > token1) {
             (token0, token1) = (token1, token0);
