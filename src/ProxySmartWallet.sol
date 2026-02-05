@@ -24,6 +24,13 @@ import {AddressConstants} from "hookmate/constants/AddressConstants.sol";
 // import {V4PositionManagerDeployer} from "hookmate/artifacts/V4PositionManager.sol";
 // import {V4RouterDeployer} from "hookmate/artifacts/V4Router.sol";
 
+interface IFactory {
+     function createWallet(address _implementation, bytes memory _initCallData)
+        external
+        payable
+        returns (address wallet);    
+}
+
 
 contract ProxySmartWallet {
     using StateLibrary for IPoolManager;
@@ -33,17 +40,20 @@ contract ProxySmartWallet {
     IPoolManager public immutable poolManager;
     IPermit2 public immutable permit2;
     IPositionManager public immutable positionManager;
+    IFactory public immutable factory;
 
     constructor(
     	address _router, 
     	address _poolManager, 
     	address _permit2,
-    	address _positionManager
+    	address _positionManager,
+    	address _factory
     	) {
         router = IUniswapV4Router04(payable(_router));
         poolManager = IPoolManager(_poolManager);
         permit2 = IPermit2(_permit2);
         positionManager = IPositionManager(_positionManager);
+        factory = IFactory(_factory);
     }
 
     function swapAndTransfer(
@@ -79,5 +89,9 @@ contract ProxySmartWallet {
         }
         // Transfer
         IERC20(_tokenForTransfer).safeTransfer(_to, _amount);
+    }
+
+    function initFreshWallet() external returns(address) {
+    	return factory.createWallet(address(this), bytes(""));
     }
 }

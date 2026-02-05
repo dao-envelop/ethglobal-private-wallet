@@ -61,13 +61,15 @@ contract ProxySmartWalletTest is BaseTest {
         deployArtifactsAndLabel();
 
         (currency0, currency1) = deployCurrencyPair();
+        factory = new WalletFactory();
         proxyWallet = new ProxySmartWallet(
             address(swapRouter), 
             address(poolManager), 
             address(permit2),
-            address(poolManager)
+            address(poolManager),
+            address(factory)
         );
-        factory = new WalletFactory();
+        
 
         // Create the pool
         poolKey = PoolKey(currency0, currency1, 3000, 60, IHooks(address(0)));
@@ -222,15 +224,18 @@ contract ProxySmartWalletTest is BaseTest {
 
         // // Parameters for DECREASE_LIQUIDITY
         params[0] = abi.encode(
-            tokenId,           // Position to decrease+
-            liquidityDecrease, // Amount to remove
-            amount0Min,        // Minimum token0 to receive
-            amount1Min,        // Minimum token1 to receive
-            Constants.ZERO_BYTES                // No hook data needed
+            tokenId,              // Position to decrease+
+            liquidityDecrease,    // Amount to remove
+            amount0Min,           // Minimum token0 to receive
+            amount1Min,           // Minimum token1 to receive
+            Constants.ZERO_BYTES  // No hook data needed
         );
         
         // Creating fresh wallet
-        address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
+        //address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
+
+        // !!!!! Should be called from EOA with 7702 delegation !!!!
+        address freshProxyWalletAddress = proxyWallet.initFreshWallet();
         freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
         // Parameters for TAKE_PAIR
         params[1] = abi.encode(
@@ -255,6 +260,7 @@ contract ProxySmartWalletTest is BaseTest {
         vm.startPrank(address(this));
         //console2.log("Sender is: %s", msg.sender);
         //Execute the decrease
+        // !!!!! Should be called from EOA with 7702 delegation !!!!
         positionManager.modifyLiquidities(
             abi.encode(actions, params),
             block.timestamp + 60 // 60 second deadline
@@ -277,6 +283,8 @@ contract ProxySmartWalletTest is BaseTest {
         Currency curForTransfer = pK.currency1;  
 
         vm.startPrank(address(this));
+
+        // !!!!! Should be called from EOA with 7702 delegation !!!!
         freshProxyWallet.swapAndTransfer(
           pK,
           Currency.unwrap(curForTransfer),  //token address for transfer
@@ -284,6 +292,8 @@ contract ProxySmartWalletTest is BaseTest {
           WANT_TO_TRANSFER
         );
         vm.stopPrank();
+
+        
         assertApproxEqAbs(
             curForTransfer.balanceOf(address(beneficiary)), 
             WANT_TO_TRANSFER, 

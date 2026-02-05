@@ -6,16 +6,15 @@ pragma solidity ^0.8.30;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
+
+
 /*
  * @dev https://eips.ethereum.org/EIPS/eip-1167[EIP 1167] is a standard for
- * deploying minimal proxy contracts, also known as "clones".
+ * deploying minimal cheap proxy contracts, also known as "clones".
  */
-
 contract WalletFactory {
 
     event WalletDeployment(address indexed proxy, address indexed implementation);
-
-    constructor() {}
 
     function createWallet(address _implementation, bytes memory _initCallData)
         public
