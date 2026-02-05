@@ -105,6 +105,10 @@ contract ProxySmartWalletTest is BaseTest {
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
     uint128 public constant WANT_TO_TRANSFER = 100e6;
+    uint128 public constant SLIPAGE = 100e6;
+
+
+    address internal beneficiary = address(0xFEEBEEF);
     
     Currency currency0;
     Currency currency1;
@@ -120,21 +124,28 @@ contract ProxySmartWalletTest is BaseTest {
 
     function setUp() public {
         // Deploys all required artifacts.
-        proxyWallet = new ProxySmartWallet();
+        
+
         deployArtifactsAndLabel();
 
         (currency0, currency1) = deployCurrencyPair();
+        proxyWallet = new ProxySmartWallet(
+            address(swapRouter), 
+            address(poolManager), 
+            address(permit2),
+            address(poolManager)
+        );
 
         // Create the pool
         poolKey = PoolKey(currency0, currency1, 3000, 60, IHooks(address(0)));
-        poolId = poolKey.toId();
+        //poolId = poolKey.toId();
         poolManager.initialize(poolKey, Constants.SQRT_PRICE_1_1);
 
         // Provide full-range liquidity to the pool
         tickLower = TickMath.minUsableTick(poolKey.tickSpacing);
         tickUpper = TickMath.maxUsableTick(poolKey.tickSpacing);
 
-        uint128 liquidityAmount = 1000e6;
+        uint128 liquidityAmount = 10000e6;
 
         (uint256 amount0Expected, uint256 amount1Expected) = LiquidityAmounts.getAmountsForLiquidity(
             Constants.SQRT_PRICE_1_1,
@@ -161,7 +172,7 @@ contract ProxySmartWalletTest is BaseTest {
         assertGt(currency0.balanceOf(address(this)), 0);
         assertGt(currency1.balanceOf(address(this)), 0);
         positionManager.getPoolAndPositionInfo(tokenId);
-        uint128 curL = positionManager.getPositionLiquidity(tokenId);
+        //uint128 curL = positionManager.getPositionLiquidity(tokenId);
         uint128 liquidityDecrease =  WANT_TO_TRANSFER / 2;
         uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
         uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
@@ -255,6 +266,70 @@ contract ProxySmartWalletTest is BaseTest {
             deadline: block.timestamp + 1
         });
     vm.stopPrank();
+    }
+
+    function test_transferFromWallet() public {
+        /////////////////////////////////////////////////
+        // Pre conditions: two token balanses should  ///
+        // be already at proxy wallet                 ///
+        /////////////////////////////////////////////////
+        uint128 liquidityDecrease =  WANT_TO_TRANSFER / 2;
+        uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
+        uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
+        //address recipient;
+
+        bytes memory actions = abi.encodePacked(
+            uint8(Actions.DECREASE_LIQUIDITY),
+            uint8(Actions.TAKE_PAIR)
+            //Actions.SETTLE_PAIR
+        );
+
+        // // Number of parameters depends on our strategy
+        bytes[] memory params = new bytes[](2);
+
+        // // Parameters for DECREASE_LIQUIDITY
+        params[0] = abi.encode(
+            tokenId,           // Position to decrease+
+            liquidityDecrease, // Amount to remove
+            amount0Min,        // Minimum token0 to receive
+            amount1Min,        // Minimum token1 to receive
+            Constants.ZERO_BYTES                // No hook data needed
+        );
+
+        // Parameters for TAKE_PAIR
+        params[1] = abi.encode(
+            currency0,
+            currency1,
+            address(proxyWallet) //recepient
+        );
+
+        //address owner = positionManager.ownerOf(tokenId);
+
+
+        vm.startPrank(address(this));
+        //console2.log("Sender is: %s", msg.sender);
+        //Execute the decrease
+        positionManager.modifyLiquidities(
+            abi.encode(actions, params),
+            block.timestamp + 60 // 60 second deadline
+        );
+        vm.stopPrank();
+        ///////////////////////////////////////////////// 
+        //(PoolKey memory poolKey, PositionInfo info)
+        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        pK.currency0.balanceOf(address(proxyWallet));
+        pK.currency1.balanceOf(address(proxyWallet));
+        console2.log("proxyWallet.router: %s", address(proxyWallet.router()));
+        Currency curForTransfer = pK.currency0; 
+        vm.startPrank(address(this));
+        proxyWallet.swapAndTransfer(
+          pK,
+          Currency.unwrap(curForTransfer),  //token address for transfer
+          beneficiary,  //to
+          WANT_TO_TRANSFER
+        );
+        vm.stopPrank();
+        //assertEqDecimal(curForTransfer.balanceOf(address(beneficiary)), WANT_TO_TRANSFER, 6);
     }
 
 
