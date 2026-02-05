@@ -19,86 +19,16 @@ import {Constants} from "@uniswap/v4-core/test/utils/Constants.sol";
 import {EasyPosm} from "./utils/libraries/EasyPosm.sol";
 
 import {ProxySmartWallet} from "../src/ProxySmartWallet.sol";
+import {WalletFactory} from "../src/WalletFactory.sol";
 import {BaseTest} from "./utils/BaseTest.sol";
 
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Commands} from "@uniswap/universal-router/contracts/libraries/Commands.sol";
 import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
 import {IUniversalRouter} from "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
-//import {MockERC20} from "@openzeppelin/uniswap-hooks/lib/ solmate/src/test/utils/mocks/MockERC20.sol";
-interface IERC20 {
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    /**
-     * @dev Returns the value of tokens in existence.
-     */
-    function totalSupply() external view returns (uint256);
-
-    /**
-     * @dev Returns the value of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
-
-    /**
-     * @dev Moves a `value` amount of tokens from the caller's account to `to`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transfer(address to, uint256 value) external returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    /**
-     * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
-     * caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 value) external returns (bool);
-
-    /**
-     * @dev Moves a `value` amount of tokens from `from` to `to` using the
-     * allowance mechanism. `value` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
-}
-
-//import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 contract ProxySmartWalletTest is BaseTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
@@ -116,6 +46,8 @@ contract ProxySmartWalletTest is BaseTest {
     PoolKey poolKey;
 
     ProxySmartWallet proxyWallet;
+    ProxySmartWallet freshProxyWallet;
+    WalletFactory factory;
     PoolId poolId;
 
     uint256 tokenId;
@@ -135,6 +67,7 @@ contract ProxySmartWalletTest is BaseTest {
             address(permit2),
             address(poolManager)
         );
+        factory = new WalletFactory();
 
         // Create the pool
         poolKey = PoolKey(currency0, currency1, 3000, 60, IHooks(address(0)));
@@ -295,12 +228,14 @@ contract ProxySmartWalletTest is BaseTest {
             amount1Min,        // Minimum token1 to receive
             Constants.ZERO_BYTES                // No hook data needed
         );
-
+        
+        address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
+        freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
         // Parameters for TAKE_PAIR
         params[1] = abi.encode(
             currency0,
             currency1,
-            address(proxyWallet) //recepient
+            freshProxyWalletAddress //recepient
         );
 
         //address owner = positionManager.ownerOf(tokenId);
@@ -317,12 +252,12 @@ contract ProxySmartWalletTest is BaseTest {
         ///////////////////////////////////////////////// 
         //(PoolKey memory poolKey, PositionInfo info)
         (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
-        pK.currency0.balanceOf(address(proxyWallet));
-        pK.currency1.balanceOf(address(proxyWallet));
-        console2.log("proxyWallet.router: %s", address(proxyWallet.router()));
+        pK.currency0.balanceOf(freshProxyWalletAddress);
+        pK.currency1.balanceOf(freshProxyWalletAddress);
+        //console2.log("freshProxyWallet.router: %s", freshProxyWallet.router());
         Currency curForTransfer = pK.currency1; 
         vm.startPrank(address(this));
-        proxyWallet.swapAndTransfer(
+        freshProxyWallet.swapAndTransfer(
           pK,
           Currency.unwrap(curForTransfer),  //token address for transfer
           beneficiary,  //to
