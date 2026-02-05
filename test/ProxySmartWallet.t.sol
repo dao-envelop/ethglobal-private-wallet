@@ -320,7 +320,7 @@ contract ProxySmartWalletTest is BaseTest {
         pK.currency0.balanceOf(address(proxyWallet));
         pK.currency1.balanceOf(address(proxyWallet));
         console2.log("proxyWallet.router: %s", address(proxyWallet.router()));
-        Currency curForTransfer = pK.currency0; 
+        Currency curForTransfer = pK.currency1; 
         vm.startPrank(address(this));
         proxyWallet.swapAndTransfer(
           pK,
