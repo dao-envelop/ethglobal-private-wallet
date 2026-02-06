@@ -8,34 +8,14 @@ import {ICalibur} from "@uniswap/calibur/interfaces/ICalibur.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "@uniswap/calibur/libraries/SignedBatchedCallLib.sol";
 import {CallLib, Call} from "@uniswap/calibur/libraries/CallLib.sol";
 import {BatchedCallLib, BatchedCall} from "@uniswap/calibur/libraries/BatchedCallLib.sol";
-import {ProxySmartWallet} from "../src/ProxySmartWallet.sol";
-import {WalletFactory} from "../src/WalletFactory.sol";
 
 // Max imports
-//import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-//import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-//import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
-//import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-//import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
-import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
-// import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-// import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
-// import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {Constants} from "@uniswap/v4-core/test/utils/Constants.sol";
-
-import {EasyPosm} from "../test/utils/libraries/EasyPosm.sol";
-
 import {ProxySmartWallet} from "../src/ProxySmartWallet.sol";
-import {WalletFactory} from "../src/WalletFactory.sol";
 import {BaseTest} from "../test/utils/BaseTest.sol";
-
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
-// import {Commands} from "@uniswap/universal-router/contracts/libraries/Commands.sol";
-// import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
-// import {IUniversalRouter} from "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
-// import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 contract InteracteScript is Script, BaseTest {
@@ -70,6 +50,9 @@ contract InteracteScript is Script, BaseTest {
 
         // Get  contracts
         deployArtifactsAndLabel();
+        proxyWallet = ProxySmartWallet(0x8a3e1e1680cF2279D9eCa6E55e4E8897363Ea60d);
+        //freshProxyWallet = ProxySmartWallet();
+        /////
 
         signerAccount = ICalibur(forCalibur);
 
