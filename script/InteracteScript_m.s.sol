@@ -8,8 +8,7 @@ import {ICalibur} from "@uniswap/calibur/interfaces/ICalibur.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "@uniswap/calibur/libraries/SignedBatchedCallLib.sol";
 import {CallLib, Call} from "@uniswap/calibur/libraries/CallLib.sol";
 import {BatchedCallLib, BatchedCall} from "@uniswap/calibur/libraries/BatchedCallLib.sol";
-
-// Max imports
+import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {Constants} from "@uniswap/v4-core/test/utils/Constants.sol";
@@ -24,71 +23,36 @@ contract InteracteScript is Script, BaseTest {
     using CallLib for Call;
     using BatchedCallLib for BatchedCall;
     using SignedBatchedCallLib for SignedBatchedCall;
-    address payable impl_address = payable(0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00);
     address niftsy_address = 0x7728cd70b3dD86210e2bd321437F448231B81733;
+    address usdt = 0x55d398326f99059fF775485246999027B3197955;
+    address usdc = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d;
 
-    uint256 public immutable forCaliburPK = 0x1111;//vm.envUint("FORCALIBUR_PK");
+    uint256 public immutable forCaliburPK = vm.envUint("FORCALIBUR_PK");
     address payable forCalibur = payable(vm.addr(forCaliburPK));
-    uint256 amount = 1;
-    address receiver1 = 0xf315B9006C20913D6D8498BDf657E778d4Ddf2c4;
-    address receiver2 = 0x5992Fe461F81C8E0aFFA95b831E50e9b3854BA0E;
     address executor = 0x5992Fe461F81C8E0aFFA95b831E50e9b3854BA0E;
     ICalibur public signerAccount;
     bytes constant EMPTY_HOOK_DATA = "";
+    uint256 nonceForCalibur = 8;  // put new nonce!!!
 
-    // New /////////////////////////////////////////////////////////////////
-    uint256 tokenId; // Uniswap v4 position tokenId
+    uint256 tokenId = 247945; // Uniswap v4 position tokenId
     ProxySmartWallet proxyWallet;
     ProxySmartWallet freshProxyWallet;
-    uint128 public constant WANT_TO_TRANSFER = 100e6;
+    uint128 public constant WANT_TO_TRANSFER = 1e16;
     uint128 public constant SLIPPAGE_BPS = 100; // 100 bps - 1%, 10 = 0.1%
-    address internal beneficiary = address(0xFEEBEEF);
+    address internal beneficiary = address(0x5992Fe461F81C8E0aFFA95b831E50e9b3854BA0E);
     Currency currency0;
     Currency currency1;
     /////////////////////////////////////////////////////////////////////
     function run() public {
+        deployArtifactsAndLabel();
+
+        currency0 = Currency.wrap(usdt);
+        currency1 = Currency.wrap(usdc);
 
         // Get  contracts
-        deployArtifactsAndLabel();
         proxyWallet = ProxySmartWallet(0x8a3e1e1680cF2279D9eCa6E55e4E8897363Ea60d);
-        //freshProxyWallet = ProxySmartWallet();
         /////
-
-        signerAccount = ICalibur(forCalibur);
-
-        Call memory call1;
-        Call memory call2;
-        Call[] memory _calls = new Call[](2);
-
-        call1.to = niftsy_address;
-        call1.value = 0;
-        call1.data = abi.encodeWithSelector(ERC20.transfer.selector, receiver1, amount);
-        _calls[0] = call1;
-
-        call2.to = address(0);
-        call2.value = amount;
-        call2.data = "";
-        _calls[1] = call2;
-
-        BatchedCall memory batch = BatchedCall({calls: _calls, revertOnFailure: true});
-
-        SignedBatchedCall memory signedCall = SignedBatchedCall({
-            batchedCall: batch,
-            keyHash: bytes32(0),
-            nonce: 2,
-            executor: address(0),
-            deadline: 0
-        });
-
-        bytes32 hash1 = SignedBatchedCallLib.hash(signedCall);
-        bytes32 hashToSign = signerAccount.hashTypedData(hash1);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(forCaliburPK, hashToSign);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
-
-        vm.startBroadcast(executor);
-        signerAccount.execute(signedCall, wrappedSignature);
-        vm.stopBroadcast();
+        
         ////////////////////////////////////////////////////////////////////////////////////
 
         /////////////////////////////////////////////////
@@ -96,19 +60,18 @@ contract InteracteScript is Script, BaseTest {
         // be already at proxy wallet   (tokenId)     ///
         /////////////////////////////////////////////////
         //(PoolKey memory poolKey, PositionInfo info (we not need now))
-        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        
         bytes32 salt = keccak256(abi.encode("User defined nonce", block.timestamp));
         address freshProxyWalletAddress = proxyWallet.predictWalletAddress(salt);
+        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
 
         uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
-        uint256 amount0Min = liquidityDecrease / 2 - 1e6;
-        uint256 amount1Min = liquidityDecrease / 2 - 1e6;
-        //address recipient;
+        uint256 amount0Min = liquidityDecrease / 2 - 1e10;
+        uint256 amount1Min = liquidityDecrease / 2 - 1e10;
 
         bytes memory actions = abi.encodePacked(
             uint8(Actions.DECREASE_LIQUIDITY),
             uint8(Actions.TAKE_PAIR)
-            //Actions.SETTLE_PAIR
         );
 
         // // Number of parameters depends on our strategy
@@ -122,12 +85,6 @@ contract InteracteScript is Script, BaseTest {
             amount1Min,           // Minimum token1 to receive
             Constants.ZERO_BYTES  // No hook data needed
         );
-        
-        // Creating fresh wallet
-        //address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
-
-        // !!!!! Should be called from EOA with 7702 delegation !!!!
-        //address freshProxyWalletAddress = proxyWallet.initFreshWallet();
         
         // Parameters for TAKE_PAIR
         params[1] = abi.encode(
@@ -151,7 +108,15 @@ contract InteracteScript is Script, BaseTest {
         // 3. Swap half of withdrawn assets to one.        //
         // 4. transfer to beneficiary                      //
         /////////////////////////////////////////////////////       
-        bytes memory call_01 = abi.encodeCall(
+
+        bytes memory call_01 = abi.encodeWithSignature(
+            "initFreshWallet(bytes32)",
+            salt
+        );
+        console2.logString("Target: Proxy Wallet implementation");
+        console2.logBytes(call_01);
+
+        bytes memory call_02 = abi.encodeCall(
             positionManager.modifyLiquidities,
             (
                 abi.encode(actions, params),
@@ -159,13 +124,6 @@ contract InteracteScript is Script, BaseTest {
             )
         );
         console2.logString("Target: Uniswap V4 positionManager");
-        console2.logBytes(call_01);
-
-        bytes memory call_02 = abi.encodeWithSignature(
-            "initFreshWallet(bytes32)",
-            salt
-        );
-        console2.logString("Target: Proxy Wallet implementation");
         console2.logBytes(call_02);
 
         bytes memory call_03 = abi.encodeCall(
@@ -180,12 +138,49 @@ contract InteracteScript is Script, BaseTest {
         console2.logString("Target: New Proxy Wallet");
         console2.logBytes(call_03);
 
-        vm.startPrank(address(this));
-          address(positionManager).functionCall(call_01);
-          address(proxyWallet).functionCall(call_02);
-          freshProxyWalletAddress.functionCall(call_03);
-        vm.stopPrank();
+        // Calibur part //
+        signerAccount = ICalibur(forCalibur);
+
+        Call memory call1;
+        Call memory call2;
+        Call memory call3;
+        Call[] memory _calls = new Call[](3);
+
+        call1.to = address(proxyWallet);
+        call1.value = 0;
+        call1.data = call_01;
+        _calls[0] = call1;
+
+        call2.to = address(positionManager);
+        call2.value = 0;
+        call2.data = call_02;
+        _calls[1] = call2;
+
+        call3.to = freshProxyWalletAddress;
+        call3.value = 0;
+        call3.data = call_03;
+        _calls[2] = call3;
+
+        BatchedCall memory batch = BatchedCall({calls: _calls, revertOnFailure: true});
+
+        SignedBatchedCall memory signedCall = SignedBatchedCall({
+            batchedCall: batch,
+            keyHash: bytes32(0),
+            nonce: nonceForCalibur,
+            executor: address(0),
+            deadline: 0
+        });
+
+        bytes32 preparedHash = SignedBatchedCallLib.hash(signedCall);
+        bytes32 hashToSign = signerAccount.hashTypedData(preparedHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(forCaliburPK, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.startBroadcast(executor);
+        signerAccount.execute(signedCall, wrappedSignature);
+        vm.stopBroadcast();
         ////////////////////////////////////////////////////////////////////////////////
     }
 }
-// forge script script/InteracteScript2.s.sol:InteracteScript --rpc-url bnb_smart_chain  --broadcast --via-ir --account secret2
+// forge script script/InteracteScript_m.s.sol:InteracteScript --rpc-url bnb_smart_chain  --broadcast --via-ir --account secret2
