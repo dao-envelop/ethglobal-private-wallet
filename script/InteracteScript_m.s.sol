@@ -51,7 +51,13 @@ contract InteracteScript is Script, BaseTest {
         currency1 = Currency.wrap(usdc);
 
         // Get  contracts
-        proxyWallet = ProxySmartWallet(0x8a3e1e1680cF2279D9eCa6E55e4E8897363Ea60d);
+        if (block.chainid == 130) {
+            proxyWallet = ProxySmartWallet(0x21c23bA0ec49c9440CD259cCB48ff9D06CD16522); // Unichain
+        }
+        if (block.chainid == 56) {
+            proxyWallet = ProxySmartWallet(0xa5A1fF40a1F89F26Db124DC56ad6fD8aBb378f29); // BSC
+        }
+        
         /////
 
         ////////////////////////////////////////////////////////////////////////////////////
@@ -174,4 +180,3 @@ contract InteracteScript is Script, BaseTest {
         ////////////////////////////////////////////////////////////////////////////////
     }
 }
-// forge script script/InteracteScript_m.s.sol:InteracteScript --rpc-url bnb_smart_chain  --broadcast --via-ir --account secret2
