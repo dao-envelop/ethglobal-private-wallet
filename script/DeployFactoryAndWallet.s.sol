@@ -9,23 +9,20 @@ import {AddressConstants} from "hookmate/constants/AddressConstants.sol";
 import {WalletFactory} from "../src/WalletFactory.sol";
 import {ProxySmartWallet} from "../src/ProxySmartWallet.sol";
 
-
 contract DeployFactoryAndWallet is Script {
-	function run() public {
-		vm.startBroadcast();
-		WalletFactory factory = new WalletFactory();
-		ProxySmartWallet walletImpl = new ProxySmartWallet(
+    function run() public {
+        vm.startBroadcast();
+        WalletFactory factory = new WalletFactory();
+        ProxySmartWallet walletImpl = new ProxySmartWallet(
             AddressConstants.getV4SwapRouterAddress(block.chainid),
             AddressConstants.getPoolManagerAddress(block.chainid),
             AddressConstants.getPermit2Address(),
             AddressConstants.getPositionManagerAddress(block.chainid),
-			address(factory)
-		);
-		vm.stopBroadcast();
+            address(factory)
+        );
+        vm.stopBroadcast();
 
         console2.log("WalletFactory deployed at:", address(factory));
         console2.log("ProxySmartWallet deployed at:", address(walletImpl));
-
-	}
-
+    }
 }
