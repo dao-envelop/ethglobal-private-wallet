@@ -174,11 +174,15 @@ contract ProxySmartWallet_02Test is BaseTest {
                 block.timestamp + 60 // 60 second deadline
             )
         );
+        console2.logString("Target: Uniswap V4 positionManager");
+        console2.logBytes(call_01);
 
         bytes memory call_02 = abi.encodeWithSignature(
             "initFreshWallet(bytes32)",
             salt
         );
+        console2.logString("Target: Proxy Wallet implementation");
+        console2.logBytes(call_02);
 
         bytes memory call_03 = abi.encodeCall(
             freshProxyWallet.swapAndTransfer,
@@ -189,6 +193,8 @@ contract ProxySmartWallet_02Test is BaseTest {
                 WANT_TO_TRANSFER
             )
         );
+        console2.logString("Target: New Proxy Wallet");
+        console2.logBytes(call_03);
 
         vm.startPrank(address(this));
           address(positionManager).functionCall(call_01);
