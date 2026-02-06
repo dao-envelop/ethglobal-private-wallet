@@ -25,10 +25,20 @@ import {AddressConstants} from "hookmate/constants/AddressConstants.sol";
 // import {V4RouterDeployer} from "hookmate/artifacts/V4Router.sol";
 
 interface IFactory {
-     function createWallet(address _implementation, bytes memory _initCallData)
+    function createWallet(address _implementation, bytes memory _initCallData)
         external
         payable
-        returns (address wallet);    
+        returns (address wallet);
+
+    function createWallet(address _implementation, bytes memory _initCallData, bytes32 _salt)
+        external
+        payable
+        returns (address wallet); 
+
+    function predictDeterministicAddress(address implementation, bytes32 salt) 
+        external 
+        view 
+        returns (address);   
 }
 
 
@@ -91,7 +101,15 @@ contract ProxySmartWallet {
         IERC20(_tokenForTransfer).safeTransfer(_to, _amount);
     }
 
-    function initFreshWallet() public returns(address freshWallet) {
+    function initFreshWallet() external returns(address freshWallet) {
     	freshWallet = factory.createWallet(address(this), bytes(""));
+    }
+
+    function initFreshWallet(bytes32 _salt) external returns(address freshWallet) {
+    	freshWallet = factory.createWallet(address(this), bytes(""), _salt);
+    }
+
+    function predictWalletAddress(bytes32 _salt) public view returns(address freshWallet) {
+    	freshWallet = factory.predictDeterministicAddress(address(this), _salt);
     }
 }

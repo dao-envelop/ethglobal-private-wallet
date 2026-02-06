@@ -27,13 +27,15 @@ import {Commands} from "@uniswap/universal-router/contracts/libraries/Commands.s
 import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
 import {IUniversalRouter} from "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 
-contract ProxySmartWalletTest is BaseTest {
+contract ProxySmartWallet_02Test is BaseTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
+    using Address for address;
     uint128 public constant WANT_TO_TRANSFER = 100e6;
     uint128 public constant SLIPPAGE_BPS = 100; // 100 bps - 1%, 10 = 0.1%
 
@@ -102,112 +104,18 @@ contract ProxySmartWalletTest is BaseTest {
         );
     }
 
-    function test_proofOfConcept() public {
-        assertEq(tokenId, 1);
-        assertGt(currency0.balanceOf(address(this)), 0);
-        assertGt(currency1.balanceOf(address(this)), 0);
-        positionManager.getPoolAndPositionInfo(tokenId);
-        //uint128 curL = positionManager.getPositionLiquidity(tokenId);
-        uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
-        uint256 amount0Min = WANT_TO_TRANSFER / 2 - 1e6;
-        uint256 amount1Min = WANT_TO_TRANSFER / 2 - 1e6;
-        //address recipient;
-
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.DECREASE_LIQUIDITY),
-            uint8(Actions.TAKE_PAIR)
-            //Actions.SETTLE_PAIR
-        );
-
-        // // Number of parameters depends on our strategy
-        bytes[] memory params = new bytes[](2);
-
-        // // Parameters for DECREASE_LIQUIDITY
-        params[0] = abi.encode(
-            tokenId,           // Position to decrease+
-            liquidityDecrease, // Amount to remove
-            amount0Min,        // Minimum token0 to receive
-            amount1Min,        // Minimum token1 to receive
-            Constants.ZERO_BYTES                // No hook data needed
-        );
-
-        // Parameters for TAKE_PAIR
-        params[1] = abi.encode(
-            currency0,
-            currency1,
-            address(proxyWallet) //recepient
-        );
-
-        //address owner = positionManager.ownerOf(tokenId);
-
-
-        vm.startPrank(address(this));
-        //console2.log("Sender is: %s", msg.sender);
-        //Execute the decrease
-        positionManager.modifyLiquidities(
-            abi.encode(actions, params),
-            block.timestamp + 60 // 60 second deadline
-        );
-
-        vm.stopPrank();
-
-        // Now we should make swap/////////////////////////////////////////////////////////
-        // Encode the Universal Router command
-        //bytes memory commands = abi.encodePacked(uint8(Commands.V4_SWAP));
-        bytes memory commands = abi.encodePacked(uint8(0x10));
-        bytes[] memory inputs = new bytes[](1);
-
-    // Encode V4Router actions
-        actions = abi.encodePacked(
-            uint8(Actions.SWAP_EXACT_IN_SINGLE),
-            uint8(Actions.SETTLE_ALL),
-            uint8(Actions.TAKE_ALL)
-        );
-
-    // Prepare parameters for each action
-        bytes[] memory params_sw = new bytes[](3);
-        params_sw[0] = abi.encode(
-            IV4Router.ExactInputSingleParams({
-                poolKey: poolKey,
-                zeroForOne: true,
-                amountIn: uint128(currency0.balanceOf(address(proxyWallet))),
-                amountOutMinimum: uint128(0),//WANT_TO_TRANSFER / 2 - 1e6,
-                hookData: bytes("")
-            })
-        );
-        params_sw[1] = abi.encode(currency0, uint128(currency0.balanceOf(address(proxyWallet))));
-        params_sw[2] = abi.encode(currency1, uint128(0));
-
-    // Combine actions and params into inputs
-        inputs[0] = abi.encode(actions, params_sw);
-
-    vm.startPrank(address(proxyWallet));
-        IERC20(Currency.unwrap(currency0)).approve(address(permit2), type(uint256).max);
-        IERC20(Currency.unwrap(currency0)).approve(address(swapRouter), type(uint256).max);
-
-        permit2.approve(Currency.unwrap(currency0), address(positionManager), type(uint160).max, type(uint48).max);
-        permit2.approve(Currency.unwrap(currency0), address(poolManager), type(uint160).max, type(uint48).max);
-        permit2.approve(Currency.unwrap(currency0), address(swapRouter), type(uint160).max, type(uint48).max);
-    // Execute the swap
-        //IUniversalRouter(address(swapRouter)).execute(commands, inputs, block.timestamp + 60);
-        uint256 amountIn = currency0.balanceOf(address(proxyWallet));
-        BalanceDelta swapDelta = swapRouter.swapExactTokensForTokens({
-            amountIn: amountIn,
-            amountOutMin: 0, // Very bad, but we want to allow for unlimited price impact
-            zeroForOne: true,
-            poolKey: poolKey,
-            hookData: Constants.ZERO_BYTES,
-            receiver: address(this),
-            deadline: block.timestamp + 1
-        });
-    vm.stopPrank();
-    }
 
     function test_transferFromWallet() public {
+
         /////////////////////////////////////////////////
         // Pre conditions: two token balanses should  ///
-        // be already at proxy wallet                 ///
+        // be already at proxy wallet   (tokenId)     ///
         /////////////////////////////////////////////////
+        //(PoolKey memory poolKey, PositionInfo info)
+        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        bytes32 salt = keccak256(abi.encode("User defined nonce", block.timestamp));
+        address freshProxyWalletAddress = proxyWallet.predictWalletAddress(salt);
+
         uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
         uint256 amount0Min = liquidityDecrease / 2 - 1e6;
         uint256 amount1Min = liquidityDecrease / 2 - 1e6;
@@ -235,14 +143,17 @@ contract ProxySmartWalletTest is BaseTest {
         //address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
 
         // !!!!! Should be called from EOA with 7702 delegation !!!!
-        address freshProxyWalletAddress = proxyWallet.initFreshWallet();
-        freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
+        //address freshProxyWalletAddress = proxyWallet.initFreshWallet();
+        
         // Parameters for TAKE_PAIR
         params[1] = abi.encode(
             currency0,
             currency1,
             freshProxyWalletAddress //recepient
         );
+
+        // Which of two  tokens should be transfered
+        Currency curForTransfer = pK.currency1;
 
         //address owner = positionManager.ownerOf(tokenId);
         /////////////////////////////////////////////////////
@@ -256,15 +167,41 @@ contract ProxySmartWalletTest is BaseTest {
         // 3. Swap half of withdrawn assets to one.        //
         // 4. transfer to beneficiary                      //
         /////////////////////////////////////////////////////       
+        bytes memory call_01 = abi.encodeCall(
+            positionManager.modifyLiquidities,
+            (
+                abi.encode(actions, params),
+                block.timestamp + 60 // 60 second deadline
+            )
+        );
+
+        bytes memory call_02 = abi.encodeWithSignature(
+            "initFreshWallet(bytes32)",
+            salt
+        );
+
+        bytes memory call_03 = abi.encodeCall(
+            freshProxyWallet.swapAndTransfer,
+            (
+                pK,
+                Currency.unwrap(curForTransfer),  //token address for transfer
+                beneficiary,                      //to
+                WANT_TO_TRANSFER
+            )
+        );
 
         vm.startPrank(address(this));
         //console2.log("Sender is: %s", msg.sender);
         //Execute the decrease
         // !!!!! Should be called from EOA with 7702 delegation !!!!
-        positionManager.modifyLiquidities(
-            abi.encode(actions, params),
-            block.timestamp + 60 // 60 second deadline
-        );
+        address(positionManager).functionCall(call_01);
+        address(proxyWallet).functionCall(call_02);
+        freshProxyWalletAddress.functionCall(call_03);
+        // positionManager.modifyLiquidities(
+        //     abi.encode(actions, params),
+        //     block.timestamp + 60 // 60 second deadline
+        // );
+        //proxyWallet.initFreshWallet(salt);
         vm.stopPrank();
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -272,26 +209,27 @@ contract ProxySmartWalletTest is BaseTest {
 
 
         //(PoolKey memory poolKey, PositionInfo info)
-        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        //(PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
 
         // For view in debug trace only
-        pK.currency0.balanceOf(freshProxyWalletAddress);
-        pK.currency1.balanceOf(freshProxyWalletAddress);
+        //pK.currency0.balanceOf(freshProxyWalletAddress);
+        //pK.currency1.balanceOf(freshProxyWalletAddress);
         //console2.log("freshProxyWallet.router: %s", freshProxyWallet.router());
         
         // Here we change one token from pair for transfer !!
-        Currency curForTransfer = pK.currency1;  
+        // Currency curForTransfer = pK.currency1;  
 
-        vm.startPrank(address(this));
+        // vm.startPrank(address(this));
 
-        // !!!!! Should be called from EOA with 7702 delegation !!!!
-        freshProxyWallet.swapAndTransfer(
-          pK,
-          Currency.unwrap(curForTransfer),  //token address for transfer
-          beneficiary,                      //to
-          WANT_TO_TRANSFER
-        );
-        vm.stopPrank();
+        // freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
+        // // !!!!! Should be called from EOA with 7702 delegation !!!!
+        // freshProxyWallet.swapAndTransfer(
+        //   pK,
+        //   Currency.unwrap(curForTransfer),  //token address for transfer
+        //   beneficiary,                      //to
+        //   WANT_TO_TRANSFER
+        // );
+        // vm.stopPrank();
 
         
         assertApproxEqAbs(
