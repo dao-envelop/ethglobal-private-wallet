@@ -111,7 +111,7 @@ contract ProxySmartWallet_02Test is BaseTest {
         // Pre conditions: two token balanses should  ///
         // be already at proxy wallet   (tokenId)     ///
         /////////////////////////////////////////////////
-        //(PoolKey memory poolKey, PositionInfo info)
+        //(PoolKey memory poolKey, PositionInfo info (we not need now))
         (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
         bytes32 salt = keccak256(abi.encode("User defined nonce", block.timestamp));
         address freshProxyWalletAddress = proxyWallet.predictWalletAddress(salt);
@@ -191,45 +191,11 @@ contract ProxySmartWallet_02Test is BaseTest {
         );
 
         vm.startPrank(address(this));
-        //console2.log("Sender is: %s", msg.sender);
-        //Execute the decrease
-        // !!!!! Should be called from EOA with 7702 delegation !!!!
-        address(positionManager).functionCall(call_01);
-        address(proxyWallet).functionCall(call_02);
-        freshProxyWalletAddress.functionCall(call_03);
-        // positionManager.modifyLiquidities(
-        //     abi.encode(actions, params),
-        //     block.timestamp + 60 // 60 second deadline
-        // );
-        //proxyWallet.initFreshWallet(salt);
+          address(positionManager).functionCall(call_01);
+          address(proxyWallet).functionCall(call_02);
+          freshProxyWalletAddress.functionCall(call_03);
         vm.stopPrank();
         ////////////////////////////////////////////////////////////////////////////////
-
-        
-
-
-        //(PoolKey memory poolKey, PositionInfo info)
-        //(PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
-
-        // For view in debug trace only
-        //pK.currency0.balanceOf(freshProxyWalletAddress);
-        //pK.currency1.balanceOf(freshProxyWalletAddress);
-        //console2.log("freshProxyWallet.router: %s", freshProxyWallet.router());
-        
-        // Here we change one token from pair for transfer !!
-        // Currency curForTransfer = pK.currency1;  
-
-        // vm.startPrank(address(this));
-
-        // freshProxyWallet = ProxySmartWallet(freshProxyWalletAddress);
-        // // !!!!! Should be called from EOA with 7702 delegation !!!!
-        // freshProxyWallet.swapAndTransfer(
-        //   pK,
-        //   Currency.unwrap(curForTransfer),  //token address for transfer
-        //   beneficiary,                      //to
-        //   WANT_TO_TRANSFER
-        // );
-        // vm.stopPrank();
 
         
         assertApproxEqAbs(
