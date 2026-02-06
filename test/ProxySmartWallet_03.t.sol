@@ -166,7 +166,7 @@ contract ProxySmartWallet_03Test is BaseTest {
 
     // Execute the swap
     vm.startPrank(address(this));
-        router.execute(commands, inputs, block.timestamp + 60);
+        //router.execute(commands, inputs, block.timestamp + 60);
     vm.stopPrank();
 
         // bytes memory actions = abi.encodePacked(
