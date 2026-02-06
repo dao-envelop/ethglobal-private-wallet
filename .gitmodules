@@ -10,3 +10,6 @@
 [submodule "lib/universal-router"]
 	path = lib/universal-router
 	url = https://github.com/uniswap/universal-router
+[submodule "lib/calibur"]
+	path = lib/calibur
+	url = https://github.com/uniswap/calibur

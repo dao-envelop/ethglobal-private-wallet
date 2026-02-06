@@ -59,7 +59,6 @@ contract ProxySmartWallet_02Test is BaseTest {
     function setUp() public {
         // Deploys all required artifacts.
         
-
         deployArtifactsAndLabel();
 
         (currency0, currency1) = deployCurrencyPair();
