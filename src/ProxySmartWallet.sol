@@ -91,7 +91,7 @@ contract ProxySmartWallet {
         IERC20(_tokenForTransfer).safeTransfer(_to, _amount);
     }
 
-    function initFreshWallet() external returns(address) {
-    	return factory.createWallet(address(this), bytes(""));
+    function initFreshWallet() public returns(address freshWallet) {
+    	freshWallet = factory.createWallet(address(this), bytes(""));
     }
 }
