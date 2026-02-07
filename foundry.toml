@@ -26,6 +26,7 @@ lint_on_build = false
   optimism = { key = "${API_KEY_OPTIMISTIC_ETHERSCAN}" }
   polygon = { key = "${POLYGONSCAN_TOKEN}" }
   sepolia = { key = "${ETHERSCAN_TOKEN}" }
+  unichain = { key = "${ETHERSCAN_TOKEN}" }
 
 [rpc_endpoints]
 
@@ -41,3 +42,4 @@ lint_on_build = false
   optimism = "https://optimism-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
   polygon = "https://polygon-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
   sepolia = "https://sepolia.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
+  unichain = "https://unichain-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
