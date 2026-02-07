@@ -27,7 +27,6 @@ contract InteracteScript is Script {
     bytes constant EMPTY_HOOK_DATA = "";
 
     function run() public {
-
         signerAccount = ICalibur(forCalibur);
 
         Call memory call1;
@@ -46,13 +45,8 @@ contract InteracteScript is Script {
 
         BatchedCall memory batch = BatchedCall({calls: _calls, revertOnFailure: true});
 
-        SignedBatchedCall memory signedCall = SignedBatchedCall({
-            batchedCall: batch,
-            keyHash: bytes32(0),
-            nonce: 2,
-            executor: address(0),
-            deadline: 0
-        });
+        SignedBatchedCall memory signedCall =
+            SignedBatchedCall({batchedCall: batch, keyHash: bytes32(0), nonce: 2, executor: address(0), deadline: 0});
 
         bytes32 hash1 = SignedBatchedCallLib.hash(signedCall);
         bytes32 hashToSign = signerAccount.hashTypedData(hash1);

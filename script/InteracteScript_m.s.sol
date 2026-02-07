@@ -32,7 +32,7 @@ contract InteracteScript is Script, BaseTest {
     address executor = 0x5992Fe461F81C8E0aFFA95b831E50e9b3854BA0E;
     ICalibur public signerAccount;
     bytes constant EMPTY_HOOK_DATA = "";
-    uint256 nonceForCalibur = 8;  // put new nonce!!!
+    uint256 nonceForCalibur = 8; // put new nonce!!!
 
     uint256 tokenId = 247945; // Uniswap v4 position tokenId
     ProxySmartWallet proxyWallet;
@@ -42,6 +42,7 @@ contract InteracteScript is Script, BaseTest {
     address internal beneficiary = address(0x5992Fe461F81C8E0aFFA95b831E50e9b3854BA0E);
     Currency currency0;
     Currency currency1;
+
     /////////////////////////////////////////////////////////////////////
     function run() public {
         deployArtifactsAndLabel();
@@ -50,9 +51,15 @@ contract InteracteScript is Script, BaseTest {
         currency1 = Currency.wrap(usdc);
 
         // Get  contracts
-        proxyWallet = ProxySmartWallet(0x8a3e1e1680cF2279D9eCa6E55e4E8897363Ea60d);
-        /////
+        if (block.chainid == 130) {
+            proxyWallet = ProxySmartWallet(0x21c23bA0ec49c9440CD259cCB48ff9D06CD16522); // Unichain
+        }
+        if (block.chainid == 56) {
+            proxyWallet = ProxySmartWallet(0xa5A1fF40a1F89F26Db124DC56ad6fD8aBb378f29); // BSC
+        }
         
+        /////
+
         ////////////////////////////////////////////////////////////////////////////////////
 
         /////////////////////////////////////////////////
@@ -60,32 +67,29 @@ contract InteracteScript is Script, BaseTest {
         // be already at proxy wallet   (tokenId)     ///
         /////////////////////////////////////////////////
         //(PoolKey memory poolKey, PositionInfo info (we not need now))
-        
+
         bytes32 salt = keccak256(abi.encode("User defined nonce", block.timestamp));
         address freshProxyWalletAddress = proxyWallet.predictWalletAddress(salt);
-        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        (PoolKey memory pK,) = positionManager.getPoolAndPositionInfo(tokenId);
 
-        uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
+        uint128 liquidityDecrease = (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
         uint256 amount0Min = liquidityDecrease / 2 - 1e10;
         uint256 amount1Min = liquidityDecrease / 2 - 1e10;
 
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.DECREASE_LIQUIDITY),
-            uint8(Actions.TAKE_PAIR)
-        );
+        bytes memory actions = abi.encodePacked(uint8(Actions.DECREASE_LIQUIDITY), uint8(Actions.TAKE_PAIR));
 
         // // Number of parameters depends on our strategy
         bytes[] memory params = new bytes[](2);
 
         // // Parameters for DECREASE_LIQUIDITY
         params[0] = abi.encode(
-            tokenId,              // Position to decrease+
-            liquidityDecrease,    // Amount to remove
-            amount0Min,           // Minimum token0 to receive
-            amount1Min,           // Minimum token1 to receive
-            Constants.ZERO_BYTES  // No hook data needed
+            tokenId, // Position to decrease+
+            liquidityDecrease, // Amount to remove
+            amount0Min, // Minimum token0 to receive
+            amount1Min, // Minimum token1 to receive
+            Constants.ZERO_BYTES // No hook data needed
         );
-        
+
         // Parameters for TAKE_PAIR
         params[1] = abi.encode(
             pK.currency0,
@@ -100,19 +104,16 @@ contract InteracteScript is Script, BaseTest {
         /////////////////////////////////////////////////////
         //   Main DEmo Flow could be start from here.      //
         // Let's suppose that user already have Uni V4     //
-        // position with NFT(tokenId) on her(his) EOA.     // 
+        // position with NFT(tokenId) on her(his) EOA.     //
         // The flow is:                                    //
         // 1. sign 7702 delegation for calibur.            //
         // 2. Decreae liqudity in position  - get funds    //
         //    for transfer with target on new proxy wallet //
         // 3. Swap half of withdrawn assets to one.        //
         // 4. transfer to beneficiary                      //
-        /////////////////////////////////////////////////////       
+        /////////////////////////////////////////////////////
 
-        bytes memory call_01 = abi.encodeWithSignature(
-            "initFreshWallet(bytes32)",
-            salt
-        );
+        bytes memory call_01 = abi.encodeWithSignature("initFreshWallet(bytes32)", salt);
         console2.logString("Target: Proxy Wallet implementation");
         console2.logBytes(call_01);
 
@@ -130,8 +131,8 @@ contract InteracteScript is Script, BaseTest {
             freshProxyWallet.swapAndTransfer,
             (
                 pK,
-                Currency.unwrap(curForTransfer),  //token address for transfer
-                beneficiary,                      //to
+                Currency.unwrap(curForTransfer), //token address for transfer
+                beneficiary, //to
                 WANT_TO_TRANSFER
             )
         );
@@ -164,11 +165,7 @@ contract InteracteScript is Script, BaseTest {
         BatchedCall memory batch = BatchedCall({calls: _calls, revertOnFailure: true});
 
         SignedBatchedCall memory signedCall = SignedBatchedCall({
-            batchedCall: batch,
-            keyHash: bytes32(0),
-            nonce: nonceForCalibur,
-            executor: address(0),
-            deadline: 0
+            batchedCall: batch, keyHash: bytes32(0), nonce: nonceForCalibur, executor: address(0), deadline: 0
         });
 
         bytes32 preparedHash = SignedBatchedCallLib.hash(signedCall);
@@ -183,4 +180,3 @@ contract InteracteScript is Script, BaseTest {
         ////////////////////////////////////////////////////////////////////////////////
     }
 }
-// forge script script/InteracteScript_m.s.sol:InteracteScript --rpc-url bnb_smart_chain  --broadcast --via-ir --account secret2

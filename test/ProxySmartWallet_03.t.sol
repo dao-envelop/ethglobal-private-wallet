@@ -26,10 +26,8 @@ import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Commands} from "../src/Commands.sol";
 import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
 import {IUniversalRouter} from "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-
-
 
 contract ProxySmartWallet_03Test is BaseTest {
     using EasyPosm for IPositionManager;
@@ -40,9 +38,8 @@ contract ProxySmartWallet_03Test is BaseTest {
     uint128 public constant WANT_TO_TRANSFER = 100e6;
     uint128 public constant SLIPPAGE_BPS = 100; // 100 bps - 1%, 10 = 0.1%
 
-
     address internal beneficiary = address(0xFEEBEEF);
-    
+
     Currency currency0;
     Currency currency1;
 
@@ -58,22 +55,17 @@ contract ProxySmartWallet_03Test is BaseTest {
     int24 tickLower;
     int24 tickUpper;
 
-
     function setUp() public {
         // Deploys all required artifacts.
-        
+
         deployArtifactsAndLabel();
 
         (currency0, currency1) = deployCurrencyPair();
         factory = new WalletFactory();
         proxyWallet = new ProxySmartWallet(
-            address(swapRouter), 
-            address(poolManager), 
-            address(permit2),
-            address(poolManager),
-            address(factory)
+            address(swapRouter), address(poolManager), address(permit2), address(poolManager), address(factory)
         );
-        
+
         router = IUniversalRouter(address(swapRouter));
 
         // Create the pool
@@ -111,25 +103,22 @@ contract ProxySmartWallet_03Test is BaseTest {
         permit2.approve(Currency.unwrap(currency0), address(router), type(uint160).max, uint48(block.timestamp + 60));
         permit2.approve(Currency.unwrap(currency1), address(router), type(uint160).max, uint48(block.timestamp + 60));
         vm.stopPrank();
-
     }
 
-
     function test_transferFromWallet() public {
-
         /////////////////////////////////////////////////
         // Pre conditions: two token balanses should  ///
         // be already at proxy wallet   (tokenId)     ///
         /////////////////////////////////////////////////
         //(PoolKey memory poolKey, PositionInfo info (we not need now))
-        (PoolKey memory pK, ) = positionManager.getPoolAndPositionInfo(tokenId);
+        (PoolKey memory pK,) = positionManager.getPoolAndPositionInfo(tokenId);
         pK.currency0.balanceOf(address(this));
         pK.currency1.balanceOf(address(this));
 
         bytes32 salt = keccak256(abi.encode("User defined nonce", block.timestamp));
         address freshProxyWalletAddress = proxyWallet.predictWalletAddress(salt);
 
-        uint128 liquidityDecrease =  (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
+        uint128 liquidityDecrease = (WANT_TO_TRANSFER + WANT_TO_TRANSFER * SLIPPAGE_BPS / 10000) / 2;
         uint256 amount0Min = liquidityDecrease / 2 - 1e6;
         uint256 amount1Min = liquidityDecrease / 2 - 1e6;
         uint256 amountIn = liquidityDecrease / 2 - 1e6;
@@ -141,13 +130,10 @@ contract ProxySmartWallet_03Test is BaseTest {
         bytes[] memory inputs = new bytes[](1);
 
         // Encode V4Router actions
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.SWAP_EXACT_IN_SINGLE),
-            uint8(Actions.SETTLE_ALL),
-            uint8(Actions.TAKE_ALL)
-        );
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.SWAP_EXACT_IN_SINGLE), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
 
-    // Prepare parameters for each action
+        // Prepare parameters for each action
         bytes[] memory params = new bytes[](3);
         params[0] = abi.encode(
             IV4Router.ExactInputSingleParams({
@@ -161,13 +147,13 @@ contract ProxySmartWallet_03Test is BaseTest {
         params[1] = abi.encode(pK.currency0, amountIn);
         params[2] = abi.encode(pK.currency1, minAmountOut);
 
-    // Combine actions and params into inputs
+        // Combine actions and params into inputs
         inputs[0] = abi.encode(actions, params);
 
-    // Execute the swap
-    vm.startPrank(address(this));
+        // Execute the swap
+        vm.startPrank(address(this));
         //router.execute(commands, inputs, block.timestamp + 60);
-    vm.stopPrank();
+        vm.stopPrank();
 
         // bytes memory actions = abi.encodePacked(
         //     uint8(Actions.DECREASE_LIQUIDITY),
@@ -186,13 +172,13 @@ contract ProxySmartWallet_03Test is BaseTest {
         //     amount1Min,           // Minimum token1 to receive
         //     Constants.ZERO_BYTES  // No hook data needed
         // );
-        
+
         // // Creating fresh wallet
         // //address freshProxyWalletAddress = factory.createWallet(address(proxyWallet), bytes(""));
 
         // // !!!!! Should be called from EOA with 7702 delegation !!!!
         // //address freshProxyWalletAddress = proxyWallet.initFreshWallet();
-        
+
         // // Parameters for TAKE_PAIR
         // params[1] = abi.encode(
         //     currency0,
@@ -207,14 +193,14 @@ contract ProxySmartWallet_03Test is BaseTest {
         // /////////////////////////////////////////////////////
         // //   Main DEmo Flow could be start from here.      //
         // // Let's suppose that user already have Uni V4     //
-        // // position with NFT(tokenId) on her(his) EOA.     // 
+        // // position with NFT(tokenId) on her(his) EOA.     //
         // // The flow is:                                    //
         // // 1. sign 7702 delegation for calibur.            //
         // // 2. Decreae liqudity in position  - get funds    //
         // //    for transfer with target on new proxy wallet //
         // // 3. Swap half of withdrawn assets to one.        //
         // // 4. transfer to beneficiary                      //
-        // /////////////////////////////////////////////////////       
+        // /////////////////////////////////////////////////////
         // bytes memory call_01 = abi.encodeCall(
         //     positionManager.modifyLiquidities,
         //     (
@@ -251,10 +237,9 @@ contract ProxySmartWallet_03Test is BaseTest {
         // vm.stopPrank();
         // ////////////////////////////////////////////////////////////////////////////////
 
-        
         // assertApproxEqAbs(
-        //     curForTransfer.balanceOf(address(beneficiary)), 
-        //     WANT_TO_TRANSFER, 
+        //     curForTransfer.balanceOf(address(beneficiary)),
+        //     WANT_TO_TRANSFER,
         //     WANT_TO_TRANSFER * SLIPPAGE_BPS / 10_000
         // );
     }
