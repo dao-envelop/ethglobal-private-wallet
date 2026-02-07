@@ -42,4 +42,5 @@ lint_on_build = false
   optimism = "https://optimism-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
   polygon = "https://polygon-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
   sepolia = "https://sepolia.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
-  unichain = "https://unichain-mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}"
+  unichain-sepolia = "https://sepolia.unichain.org"
+  unichain = "https://mainnet.unichain.org"
