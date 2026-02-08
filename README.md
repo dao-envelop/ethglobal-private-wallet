@@ -49,7 +49,7 @@ https://uniscan.xyz/address/0xBDb5201565925AE934A5622F0E7091aFFceed5EB#code
 **ProxySmartWallet**  
 https://uniscan.xyz/address/0x21c23bA0ec49c9440CD259cCB48ff9D06CD16522#code  
 
-**Demo Tx Example **  
+**Demo Tx Example**  
 https://uniscan.xyz/tx/0x5e03a1bc8d142c57ec3df726ee64557c2ebb371ccc717d4389c62bce27e4db37 
 
  
